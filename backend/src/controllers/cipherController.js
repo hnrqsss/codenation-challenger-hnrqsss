@@ -1,15 +1,24 @@
 const sha1 = require('sha1')
+
 const { token } = require('../configs/app.json')
 const api = require('../utils/api')
 const { MIN_LETTER, MAX_LETTER } = require('../utils/constants')
+const filePath = '../backend/public/answer.json'
+
+const { validateData } = require('../services/cipherValidator')
+const { saveData } = require('../utils/saveData')
 
 module.exports = {
     async index(req, res) {
         try {
             const { data } = await api.get(`/dev-ps/generate-data?token=${token}`)
+
+            saveData(filePath, data)
+            
             return res.json(data)
+
         } catch (error) {
-            return res.json(error.message)
+            return res.status(400).json(error.message)
         }
     },
 
@@ -18,11 +27,7 @@ module.exports = {
 
             const { string, steps } = req.body
 
-            if(!string || string.length === 0) 
-                return res.json({ error: 'The string field is required' })
-
-            if(!steps) 
-                return res.json({ error: 'The steps field is required' })    
+            validateData(string,steps)
 
             let newString = []    
             let asciCode = ''
@@ -47,16 +52,20 @@ module.exports = {
 
             const decifrado = newString.join("")
 
-            return res.json({ 
+            const data = { 
                 numero_casas: steps,
                 token,
                 cifrado: string, 
                 decifrado,
                 resumo_criptografico: sha1(decifrado)
-            })
+            }
+
+            saveData(filePath, data)
+
+            return res.json(data)
 
         }catch(error) {
-            return res.json({ error: error.message })
+            return res.status(400).json({ error: error.message })
         }
     }
 }
